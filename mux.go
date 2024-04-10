@@ -265,20 +265,36 @@ type codeResponder struct{
     code int
     error
 }
-/*
-func (r *codeResponder) HTTPRespond() (any, error) {
-    return struct{Error string `json:"error"`}{r.error.Error()}, nil
-}
-*/
 
 func (r *codeResponder) HTTPError() (int, any) {
-    return r.code, struct{Error string `json:"error"`}{r.error.Error()}
+    var str string
+    if str = r.error.Error(); str == "" {
+        str = "unknown error"
+    }
+    return r.code, struct{Error string `json:"error"`}{str}
+}
+
+func (r *codeResponder) Unwrap() error {
+    return r.error
 }
 
 func WrapError(err error, code int) error {
+    if err.Error() == "" {
+        err = errors.New(http.StatusText(code))
+    }
     return &codeResponder{
         code: code,
         error: err,
+    }
+}
+
+func HTTPError(err string, code int) error {
+    if err == "" {
+        err = http.StatusText(code)
+    }
+    return &codeResponder{
+        code: code,
+        error: errors.New(err),
     }
 }
 

@@ -29,7 +29,7 @@ type EmptyBody struct{}
 
 type Request[T any, M any] struct {
     Body T
-    HttpReq *http.Request
+    HTTPReq *http.Request
     Metadata M
 }
 
@@ -40,7 +40,7 @@ func getEmptyBodyHandler[I EmptyBody, M any](fn func(http.ResponseWriter, *Reque
     return func (w http.ResponseWriter, httpReq *http.Request, md any) error {
         req := Request[I, M]{
             Body:     I{},
-            HttpReq:  httpReq,
+            HTTPReq:  httpReq,
         }
         if md != nil {
             var ok bool
@@ -68,14 +68,14 @@ func getHandler[I any, M any](fn func(http.ResponseWriter, *Request[I, M]) error
         if t.Kind() == reflect.Struct {
             inputType = inputTypeStruct
         } else {
-            panic("mux: cannot handle type " + t.String())
+            panic("cmux: cannot handle type " + t.String())
         }
 
     }
 
     return func(w http.ResponseWriter, httpReq *http.Request, md any) error {
         req := Request[I, M]{
-            HttpReq: httpReq,
+            HTTPReq: httpReq,
         }
         if md != nil {
             var ok bool

@@ -92,7 +92,7 @@ func TestMethods(t *testing.T) {
 
 func TestPath(t *testing.T) {
     type D struct {
-        Var1     string `mux:"xyz_var1"`
+        Var1     string `cmux:"xyz_var1"`
         OtherVar string
     }
     test := func(desc, handlePath, requestPath string, expData D) {

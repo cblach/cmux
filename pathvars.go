@@ -52,8 +52,10 @@ func parseStruct(md any) map[string]pathFieldParser {
     }
     p := map[string]pathFieldParser{}
     for _, f := range reflect.VisibleFields(mdType) {
-        tag := f.Tag.Get("mux")
-        if tag == "" {
+        tag := f.Tag.Get("cmux")
+        if tag == "-" {
+            continue
+        } else if tag == "" {
             if tag = strings.ToLower(f.Name); tag == "" {
                 continue
             }
