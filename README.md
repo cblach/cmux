@@ -1,5 +1,5 @@
 # cmux
-HTTP Router for creating JSON APIs in Golang. Featuring built-in JSON handling and typesafe path variables etc.
+HTTP router for creating JSON APIs in Golang. Featuring built-in JSON handling and typesafe path variables etc.
 
 ## Basic HTTP Request Handling
 Handle methods like Get or Post. Methods with a request body like POST, must specify the data structure which the JSON should be encoded to, as a function parameter (e.g. `cmux.Request[cmux.SomeRequestBody, *Metadatastruct] error {...`). This data is then accessed from the Body field of cmux.Request.
@@ -23,10 +23,10 @@ func main() {
 }
 ```
 
-# Using Path Variables
+## Using Path Variables
 Define path variables using curly brackets in the path and retrieve values by passing a struct to HandleFunc.
 The field tag "cmux" can be used to specify which path variable the field represents. Alternately path variables are saved to field names matching the path variable (case-insensitive).
-Path variables can have prefixes or suffixes, note only one variable is supported per path section (i.e. between a pair of '/').
+Path variables can have prefixes or suffixes. Note only one variable is supported per path section (i.e. between a pair of '/').
 
 ```go
 func main() {
