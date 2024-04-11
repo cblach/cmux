@@ -44,6 +44,77 @@ func main() {
     http.ListenAndServe("localhost:8080", &m)
 }
 ```
+## Responses and filtering
+When a MethodHandler returns a type that implements the HTTPResponder interface (and the error interface), the HTTPRespond() method is called and the response is encoded as JSON (unless an error is returned). This can used to filter secret fields.
+
+```go
+type ResData struct {
+    PublicData  string `json:"public_data"`
+    PrivateData string `json:"private_data,omitempty"`
+}
+
+func (r *ResData) HTTPRespond() (any, error) {
+    return &ResData{
+        PublicData: r.PublicData,
+    }, nil
+}
+
+func (r *ResData) Error() string {
+    return "not filtered"
+}
+
+func main() {
+    m := cmux.Mux{}
+    type Md struct{}
+    m.HandleFunc("/info", &Md{},
+        cmux.Get(func(w http.ResponseWriter, req *cmux.Request[cmux.EmptyBody, *Md]) error {
+            return &ResData{
+                PublicData: "some public data",
+                PrivateData: "some private data",
+            }
+        }, nil),
+    )
+    http.ListenAndServe("localhost:8080", &m)
+}
+
+```
+## Returning errors
+HTTP errors can be returned directly using `cmux.HTTPError(err string, code int) error` or `cmux.WrapError(err error, code int) error` or by returning a type satisfying the HTTPErrorResponder interface.
+```go
+type CustomError struct{}
+
+func (ce *CustomError) HTTPError()(int, any) {
+    return 400, struct{
+        AlternateError string `json:"alternate_error"`
+    }{
+        AlternateError: "not good",
+    }
+}
+
+func (ce *CustomError) Error() string {
+    return "did not respond correctly to error"
+}
+
+func main() {
+    m := cmux.Mux{}
+    type PostData struct{
+        SomeValue string `json:"some_value"`
+    }
+    type Md struct{}
+    m.HandleFunc("/", &Md{},
+        cmux.Get(func(w http.ResponseWriter, req *cmux.Request[cmux.EmptyBody, *Md]) error {
+            return cmux.HTTPError("", http.StatusNotFound)
+        }, nil),
+        cmux.Post(func(w http.ResponseWriter, req *cmux.Request[PostData, *Md]) error {
+            return cmux.WrapError(errors.New("something bad happened"), http.StatusInternalServerError)
+        }, nil),
+        cmux.Put(func(w http.ResponseWriter, req *cmux.Request[PostData, *Md]) error {
+            return &CustomError{}
+        }, nil),
+    )
+    http.ListenAndServe("localhost:8080", &m)
+}
+```
 
 ## Before and Method Handler Data
 Each Method Handler can be passed a custom data argument, which is processed by the Mux's Before method. This could be a simple string for access control list or permissions handling or a struct containing more complex data. Here we require requests to (`"http://localhost:8080/cities/{city}"`) to have pass a `"{city}_mayor"` token in the Token HTTP request header:
