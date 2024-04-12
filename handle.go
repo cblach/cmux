@@ -33,18 +33,22 @@ type EmptyBody struct{}
 
 type Request[T any, M any] struct {
     Body T
-    HTTPReq *http.Request
     Metadata M
+
+    /* Underlying native golang request / responsewriter: */
+    HTTPReq *http.Request
+    ResponseWriter http.ResponseWriter
 }
 
 type handleFnType func (w http.ResponseWriter, httpReq *http.Request, md any) error
 
-func getEmptyBodyHandler[I EmptyBody, M any](fn func(http.ResponseWriter, *Request[I, M]) error,
+func getEmptyBodyHandler[I EmptyBody, M any](fn func(*Request[I, M]) error,
                                              data any) handleFnType {
     return func (w http.ResponseWriter, httpReq *http.Request, md any) error {
         req := Request[I, M]{
-            Body:     I{},
-            HTTPReq:  httpReq,
+            Body:          I{},
+            HTTPReq:       httpReq,
+            ResponseWriter: w,
         }
         if md != nil {
             var ok bool
@@ -55,11 +59,11 @@ func getEmptyBodyHandler[I EmptyBody, M any](fn func(http.ResponseWriter, *Reque
                 }
             }
         }
-        return fn(w, &req)
+        return fn(&req)
     }
 }
 
-func getHandler[I any, M any](fn func(http.ResponseWriter, *Request[I, M]) error,
+func getHandler[I any, M any](fn func(*Request[I, M]) error,
                               data any) handleFnType {
     var inputType int
     var input I
@@ -80,6 +84,7 @@ func getHandler[I any, M any](fn func(http.ResponseWriter, *Request[I, M]) error
     return func(w http.ResponseWriter, httpReq *http.Request, md any) error {
         req := Request[I, M]{
             HTTPReq: httpReq,
+            ResponseWriter: w,
         }
         if md != nil {
             var ok bool
@@ -113,11 +118,11 @@ func getHandler[I any, M any](fn func(http.ResponseWriter, *Request[I, M]) error
         } else {
             panic("impossible case")
         }
-        return fn(w, &req)
+        return fn(&req)
     }
 }
 
-func Delete[I EmptyBody, M any] (fn func(http.ResponseWriter, *Request[I, M]) error, data any) MethodHandler {
+func Delete[I EmptyBody, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
         Method: "DELETE",
         Func: getEmptyBodyHandler(fn, data),
@@ -125,7 +130,7 @@ func Delete[I EmptyBody, M any] (fn func(http.ResponseWriter, *Request[I, M]) er
     }
 }
 
-func Get[I EmptyBody, M any] (fn func(http.ResponseWriter, *Request[I, M]) error, data any) MethodHandler {
+func Get[I EmptyBody, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
         Method: "GET",
         Func: getEmptyBodyHandler(fn, data),
@@ -133,7 +138,7 @@ func Get[I EmptyBody, M any] (fn func(http.ResponseWriter, *Request[I, M]) error
     }
 }
 
-func Head[I EmptyBody, M any] (fn func(http.ResponseWriter, *Request[I, M]) error, data any) MethodHandler {
+func Head[I EmptyBody, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
         Method: "HEAD",
         Func: getEmptyBodyHandler(fn, data),
@@ -141,7 +146,7 @@ func Head[I EmptyBody, M any] (fn func(http.ResponseWriter, *Request[I, M]) erro
     }
 }
 
-func Options[I EmptyBody, M any] (fn func(http.ResponseWriter, *Request[I, M]) error, data any) MethodHandler {
+func Options[I EmptyBody, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
         Method: "OPTIONS",
         Func: getEmptyBodyHandler(fn, data),
@@ -149,7 +154,7 @@ func Options[I EmptyBody, M any] (fn func(http.ResponseWriter, *Request[I, M]) e
     }
 }
 
-func Patch[I any, M any] (fn func(http.ResponseWriter, *Request[I, M]) error, data any) MethodHandler {
+func Patch[I any, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
         Method: "PATCH",
         Func: getHandler(fn, data),
@@ -157,7 +162,7 @@ func Patch[I any, M any] (fn func(http.ResponseWriter, *Request[I, M]) error, da
     }
 }
 
-func Post[I any, M any] (fn func(http.ResponseWriter, *Request[I, M]) error, data any) MethodHandler {
+func Post[I any, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
         Method: "POST",
         Func: getHandler(fn, data),
@@ -165,7 +170,7 @@ func Post[I any, M any] (fn func(http.ResponseWriter, *Request[I, M]) error, dat
     }
 }
 
-func Put[I any, M any] (fn func(http.ResponseWriter, *Request[I, M]) error, data any) MethodHandler {
+func Put[I any, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
         Method: "PUT",
         Func: getHandler(fn, data),
@@ -173,7 +178,7 @@ func Put[I any, M any] (fn func(http.ResponseWriter, *Request[I, M]) error, data
     }
 }
 
-func Trace[I EmptyBody, M any] (fn func(http.ResponseWriter, *Request[I, M]) error, data any) MethodHandler {
+func Trace[I EmptyBody, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
         Method: "TRACE",
         Func: getEmptyBodyHandler(fn, data),

@@ -30,43 +30,43 @@ func TestMethods(t *testing.T) {
     test := func(desc, method, body string) {
         m := Mux{}
         m.HandleFunc("/", &EmptyType{},
-            Delete(func(w http.ResponseWriter, req *Request[EmptyBody, *EmptyType]) error {
+            Delete(func(req *Request[EmptyBody, *EmptyType]) error {
                 if method != "DELETE" {
                     t.Errorf("unexpected method %s", method)
                 }
                 return nil
             }, nil),
-            Get(func(w http.ResponseWriter, req *Request[EmptyBody, *EmptyType]) error {
+            Get(func(req *Request[EmptyBody, *EmptyType]) error {
                 if method != "GET" {
                     t.Errorf("unexpected method %s", method)
                 }
                 return nil
             }, nil),
-            Head(func(w http.ResponseWriter, req *Request[EmptyBody, *EmptyType]) error {
+            Head(func(req *Request[EmptyBody, *EmptyType]) error {
                 if method != "HEAD" {
                     t.Errorf("unexpected method %s", method)
                 }
                 return nil
             }, nil),
-            Options(func(w http.ResponseWriter, req *Request[EmptyBody, *EmptyType]) error {
+            Options(func(req *Request[EmptyBody, *EmptyType]) error {
                 if method != "OPTIONS" {
                     t.Errorf("unexpected method %s", method)
                 }
                 return nil
             }, nil),
-            Post(func(w http.ResponseWriter, req *Request[EmptyBody, *EmptyType]) error {
+            Post(func(req *Request[EmptyBody, *EmptyType]) error {
                 if method != "POST" {
                     t.Errorf("unexpected method %s", method)
                 }
                 return nil
             }, nil),
-            Put(func(w http.ResponseWriter, req *Request[EmptyBody, *EmptyType]) error {
+            Put(func(req *Request[EmptyBody, *EmptyType]) error {
                 if method != "PUT" {
                     t.Errorf("unexpected method %s", method)
                 }
                 return nil
             }, nil),
-            Trace(func(w http.ResponseWriter, req *Request[EmptyBody, *EmptyType]) error {
+            Trace(func(req *Request[EmptyBody, *EmptyType]) error {
                 if method != "TRACE" {
                     t.Errorf("unexpected method %s", method)
                 }
@@ -103,7 +103,7 @@ func TestPath(t *testing.T) {
         t.Run(desc, func(t *testing.T) {
             m := Mux{}
             m.HandleFunc(handlePath, &D{},
-                Get(func(w http.ResponseWriter, req *Request[EmptyBody, *D]) error {
+                Get(func(req *Request[EmptyBody, *D]) error {
                     if expData != *req.Metadata {
                         t.Errorf("expected variable do not match captured request variables %v != %v",
                                  expData, *req.Metadata)

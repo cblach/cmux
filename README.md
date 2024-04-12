@@ -11,10 +11,10 @@ func main() {
     }
     type Md struct{}
     m.HandleFunc("/", &Md{},
-        cmux.Get(func(w http.ResponseWriter, req *cmux.Request[cmux.EmptyBody, *Md]) error {
+        cmux.Get(func(req *cmux.Request[cmux.EmptyBody, *Md]) error {
             return nil
         }, nil),
-        cmux.Post(func(w http.ResponseWriter, req *cmux.Request[PostData, *Md]) error {
+        cmux.Post(func(req *cmux.Request[PostData, *Md]) error {
             fmt.Println("Received post value:", req.Body.SomeValue)
             return nil
         }, nil),
@@ -36,7 +36,7 @@ func main() {
         StreetName string `cmux:"street"`
     }
     m.HandleFunc("/city-{city}/{street}", &Md{},
-        cmux.Get(func(w http.ResponseWriter, req *cmux.Request[cmux.EmptyBody, *Md]) error {
+        cmux.Get(func(req *cmux.Request[cmux.EmptyBody, *Md]) error {
             fmt.Println("city:", req.Metadata.City, "street:", req.Metadata.StreetName)
             return nil
         }, nil),
@@ -67,7 +67,7 @@ func main() {
     m := cmux.Mux{}
     type Md struct{}
     m.HandleFunc("/info", &Md{},
-        cmux.Get(func(w http.ResponseWriter, req *cmux.Request[cmux.EmptyBody, *Md]) error {
+        cmux.Get(func(req *cmux.Request[cmux.EmptyBody, *Md]) error {
             return &ResData{
                 PublicData: "some public data",
                 PrivateData: "some private data",
@@ -102,13 +102,13 @@ func main() {
     }
     type Md struct{}
     m.HandleFunc("/", &Md{},
-        cmux.Get(func(w http.ResponseWriter, req *cmux.Request[cmux.EmptyBody, *Md]) error {
+        cmux.Get(func(req *cmux.Request[cmux.EmptyBody, *Md]) error {
             return cmux.HTTPError("", http.StatusNotFound)
         }, nil),
-        cmux.Post(func(w http.ResponseWriter, req *cmux.Request[PostData, *Md]) error {
+        cmux.Post(func(req *cmux.Request[PostData, *Md]) error {
             return cmux.WrapError(errors.New("something bad happened"), http.StatusInternalServerError)
         }, nil),
-        cmux.Put(func(w http.ResponseWriter, req *cmux.Request[PostData, *Md]) error {
+        cmux.Put(func(req *cmux.Request[PostData, *Md]) error {
             return &CustomError{}
         }, nil),
     )
@@ -142,7 +142,7 @@ func main() {
         },
     }
     m.HandleFunc("/cities/{city}", &Md{},
-        cmux.Get(func(w http.ResponseWriter, req *cmux.Request[cmux.EmptyBody, *Md]) error {
+        cmux.Get(func(req *cmux.Request[cmux.EmptyBody, *Md]) error {
             return nil
         }, "mayor"),
     )
