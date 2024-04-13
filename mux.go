@@ -303,7 +303,7 @@ func HTTPError(err string, code int) error {
 }
 
 type whitelistedData struct{
-    any
+    data any
 }
 
 func Whitelist(res any) whitelistedData {
@@ -311,7 +311,7 @@ func Whitelist(res any) whitelistedData {
 }
 
 func (wd whitelistedData) HTTPRespond()(any, error) {
-    return wd, nil
+    return wd.data, nil
 }
 
 func (wd whitelistedData) Error() string {
