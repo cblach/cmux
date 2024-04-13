@@ -302,6 +302,22 @@ func HTTPError(err string, code int) error {
     }
 }
 
+type whitelistedData struct{
+    any
+}
+
+func Whitelist(res any) whitelistedData {
+    return whitelistedData{res}
+}
+
+func (wd whitelistedData) HTTPRespond()(any, error) {
+    return wd, nil
+}
+
+func (wd whitelistedData) Error() string {
+    return "whitelisted data not working"
+}
+
 /*
  * Attempt to match a dir
  * If no exact match is found, it will attempt to fallback to a served dir,
