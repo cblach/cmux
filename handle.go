@@ -19,18 +19,26 @@ const(
     inputTypeStruct
 )
 
+// MethodHandlers each handles a specific HTTP Method. They are returned
+// by the functions Delete, Get, Head, Options, Patch, Post, Put, Trace.
 type MethodHandler struct {
-    Method   string
-    Func     func(http.ResponseWriter, *http.Request, any) error
-    Data     any
-    Mux      *Mux /* the leaf-node mux respponisble for the handler */
+    method string
+    fn     func(http.ResponseWriter, *http.Request, any) error
+    data   any
+    mux    *Mux /* the leaf-node mux respponisble for the handler */
 
     /* for debug purposes: */
-    FuncName string
+    fnName string
 }
 
 type EmptyBody struct{}
 
+// Request stores incoming request data.
+// Body contains the unmarshaled body of the request
+// Metadata contains custom data that is passed to the
+// HandleFunc and can be mutated by the mux Before Method.
+// It also provides access to the underlying http.Request and
+// http.ResponseWriter
 type Request[T any, M any] struct {
     Body T
     Metadata M
@@ -122,78 +130,89 @@ func getHandler[I any, M any](fn func(*Request[I, M]) error,
     }
 }
 
+// Handle DELETE HTTP method requests.
 func Delete[I EmptyBody, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
-        Method: "DELETE",
-        Func: getEmptyBodyHandler(fn, data),
-        Data: data,
+        method: "DELETE",
+        fn: getEmptyBodyHandler(fn, data),
+        data: data,
     }
 }
 
+// Handle GET HTTP method requests.
 func Get[I EmptyBody, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
-        Method: "GET",
-        Func: getEmptyBodyHandler(fn, data),
-        Data: data,
+        method: "GET",
+        fn:     getEmptyBodyHandler(fn, data),
+        data:    data,
     }
 }
 
+// Handle HEAD HTTP method requests.
 func Head[I EmptyBody, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
-        Method: "HEAD",
-        Func: getEmptyBodyHandler(fn, data),
-        Data: data,
+        method: "HEAD",
+        fn:     getEmptyBodyHandler(fn, data),
+        data:   data,
     }
 }
 
+// Handle OPTIONS HTTP method requests.
 func Options[I EmptyBody, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
-        Method: "OPTIONS",
-        Func: getEmptyBodyHandler(fn, data),
-        Data: data,
+        method: "OPTIONS",
+        fn:     getEmptyBodyHandler(fn, data),
+        data:   data,
     }
 }
 
+// Handle PATCH HTTP method requests.
 func Patch[I any, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
-        Method: "PATCH",
-        Func: getHandler(fn, data),
-        Data: data,
+        method: "PATCH",
+        fn:     getHandler(fn, data),
+        data:   data,
     }
 }
 
+// Handle POST HTTP method requests.
 func Post[I any, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
-        Method: "POST",
-        Func: getHandler(fn, data),
-        Data: data,
+        method: "POST",
+        fn:     getHandler(fn, data),
+        data:   data,
     }
 }
 
+// Handle PUT HTTP method requests.
 func Put[I any, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
-        Method: "PUT",
-        Func: getHandler(fn, data),
-        Data: data,
+        method: "PUT",
+        fn:     getHandler(fn, data),
+        data:   data,
     }
 }
 
+// Handle TRACE HTTP method requests.
 func Trace[I EmptyBody, M any] (fn func(*Request[I, M]) error, data any) MethodHandler {
     return MethodHandler{
-        Method: "TRACE",
-        Func: getEmptyBodyHandler(fn, data),
-        Data: data,
+        method: "TRACE",
+        fn:     getEmptyBodyHandler(fn, data),
+        data:   data,
     }
 }
 
+// HandleFunc handles requests matching the specified path in the speciified MethodHandlers.
+// The metadata is copied for each new incoming request and can be mutated by the Mux.Before
+// method before being available in the MethodHandler functions.
 func (mux *Mux) HandleFunc(path string, metadata any, mhs ...MethodHandler) {
     if reflect.TypeOf(metadata) == methodHandlerType {
         panic("missing metadata argument")
     }
     methodHandlers := map[string]*MethodHandler{}
     for i, mh := range mhs {
-        mh.FuncName = runtime.FuncForPC(reflect.ValueOf(mh.Func).Pointer()).Name()
-        methodHandlers[mh.Method] = &mhs[i]
+        mh.fnName = runtime.FuncForPC(reflect.ValueOf(mh.fn).Pointer()).Name()
+        methodHandlers[mh.method] = &mhs[i]
     }
     mux.mkRoute(path, metadata, methodHandlers)
 }

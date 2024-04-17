@@ -11,25 +11,23 @@ import(
     "sort"
 )
 
-func (mux *Mux) ToggleDebugTimings(toggle bool) {
-    mux.debugTimings = toggle
+func (mux *Mux) EnableDebugTimings(enable bool) {
+    mux.debugTimings = enable
 }
 
-func (mux *Mux) ToggleDebug(toggle bool) {
-    mux.debug = true
+func (mux *Mux) EnableDebug(enable bool) {
+    mux.debug = enable
 }
 
 func getFunctionName(mh *MethodHandler) string {
-    if mh.FuncName != "" { return mh.FuncName }
-    return runtime.FuncForPC(reflect.ValueOf(mh.Func).Pointer()).Name()
+    if mh.fnName != "" { return mh.fnName }
+    return runtime.FuncForPC(reflect.ValueOf(mh.fn).Pointer()).Name()
 }
 
-func (mux *Mux) Print(w io.Writer, indentA ...string) {
-    mux.RLock()
-    defer mux.RUnlock()
+func (mux *Mux) Print(w io.Writer, indent string) {
+    mux.mutex.RLock()
+    defer mux.mutex.RUnlock()
     const stdindent = "    "
-    indent := ""
-    if len(indentA) != 0 { indent = indentA[0] }
 
     keys := make([]string, 0, len(mux.m))
     for k := range mux.m {
@@ -41,7 +39,8 @@ func (mux *Mux) Print(w io.Writer, indentA ...string) {
         hasMethod := false
         for method, mh := range v.methodHandlers {
             hasMethod = true
-            fmt.Fprintln(w, indent + "/" + k + " (" + method +  ")->" + mh.FuncName + "()")
+            fmt.Fprintln(w, indent + "/" + k + " (" + method +
+                            ")->" + mh.fnName + "()")
         }
         if !hasMethod {
             fmt.Fprintln(w, indent + "/" + k)
@@ -52,7 +51,8 @@ func (mux *Mux) Print(w io.Writer, indentA ...string) {
         hasMethod := false
         for method, mh := range v.Mux.methodHandlers {
             hasMethod = true
-            fmt.Fprintln(w, indent + "/" + v.Prefix + v.Label+ " (" + method +  ")->" + mh.FuncName + "()")
+            fmt.Fprintln(w, indent + "/" + v.Prefix + v.Label+ " (" +
+                            method +  ")->" + mh.fnName + "()")
         }
         if !hasMethod {
             fmt.Fprintln(w, indent + "/" + v.Prefix + v.Label)

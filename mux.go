@@ -43,7 +43,7 @@ type Mux struct {
     /* Linearly mapped muxes */
     matchers    []fmtMatcher
 
-    sync.RWMutex
+    mutex sync.RWMutex
 }
 
 var methodHandlerType = reflect.TypeOf(MethodHandler{})
@@ -81,9 +81,9 @@ func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
         return
     }
     dirs := strings.Split(r.URL.Path, "/")[1:]
-    mux.RLock()
+    mux.mutex.RLock()
     match, fallback, patches := mux.matchDir(dirs)
-    mux.RUnlock()
+    mux.mutex.RUnlock()
     if match == nil {
         match = fallback
         if match == nil {
@@ -112,14 +112,14 @@ func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
         mdIf = reflect.NewAt(match.metadataType.Elem(), mdPtr).Interface()
     }
     if mux.Before != nil {
-        if err := mux.Before(w, r, mdIf, mh.Data); err != nil {
+        if err := mux.Before(w, r, mdIf, mh.data); err != nil {
             mux.handleErr(w, r, err)
             return
         }
     }
     var t0, t1 time.Time
     if mux.debugTimings { t0 = time.Now() }
-    if err := mh.Func(w, r, mdIf); err != nil {
+    if err := mh.fn(w, r, mdIf); err != nil {
         mux.handleErr(w, r, err)
     }
     if mux.debugTimings {
@@ -130,9 +130,9 @@ func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 /* Note that fnName exists for debugging purposes */
 func (mux *Mux) mkRoute(path string, metadata any, methodHandlers map[string]*MethodHandler) {
-    mux.Lock()
+    mux.mutex.Lock()
     if mux.m == nil { mux.m = map[string]*Mux{} }
-    defer mux.Unlock()
+    defer mux.mutex.Unlock()
     if path[0] != '/' { log.Fatalln("path must start with slash", path) }
     dirs := strings.Split(path, "/")[1:]
 
@@ -214,10 +214,18 @@ func (mux *Mux) mkRoute(path string, metadata any, methodHandlers map[string]*Me
     mux.methodHandlers = methodHandlers
 }
 
+// Returning an error that also implements HTTPResponder in a MethodHandler
+// function will cause the server to call HTTPRespond and respond to
+// the incoming request with the returned values. If the error is non-nil
+// the response will be an error. If the error is nil, the response will be the JSON-encoded
+// 'any' return value.
 type HTTPResponder interface {
     HTTPRespond() (any, error)
 }
 
+// Returning an error that also implements HTTPErrorResponder in a MethodHandler
+// function will cause the server to call the HTTPError method and respond with the
+// specified int as status code and JSON-encode the 'any' value as the body.
 type HTTPErrorResponder interface {
     HTTPError()(int, any)
 }
@@ -282,6 +290,8 @@ func (r *codeResponder) Unwrap() error {
     return r.error
 }
 
+// HTTPError creates an error that when returned in a MethodHandler
+// makes the server reply with the specified error and HTTP code.
 func WrapError(err error, code int) error {
     if err.Error() == "" {
         err = errors.New(http.StatusText(code))
@@ -292,6 +302,8 @@ func WrapError(err error, code int) error {
     }
 }
 
+// HTTPError creates an error that when returned in a MethodHandler
+// makes the server reply with the specified error message and HTTP code.
 func HTTPError(err string, code int) error {
     if err == "" {
         err = http.StatusText(code)
@@ -302,19 +314,22 @@ func HTTPError(err string, code int) error {
     }
 }
 
-type whitelistedData struct{
+// Whitelisted data can be returned directly in method handler functions.
+type WhitelistedData struct{
     data any
 }
 
-func Whitelist(res any) whitelistedData {
-    return whitelistedData{res}
+// Whitelist takes any data and transforms it into WhitelistedData
+// which allows it to be directly returned in method handler functions.
+func Whitelist(res any) WhitelistedData {
+    return WhitelistedData{res}
 }
 
-func (wd whitelistedData) HTTPRespond()(any, error) {
+func (wd WhitelistedData) HTTPRespond()(any, error) {
     return wd.data, nil
 }
 
-func (wd whitelistedData) Error() string {
+func (wd WhitelistedData) Error() string {
     return "whitelisted data not working"
 }
 

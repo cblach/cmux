@@ -44,8 +44,10 @@ func main() {
     http.ListenAndServe("localhost:8080", &m)
 }
 ```
-## Responses and filtering
+## Responseding
 When a MethodHandler returns a type that implements the HTTPResponder interface (and the error interface), the HTTPRespond() method is called and the response is encoded as JSON (unless an error is returned). This can used to filter secret fields.
+
+### Filter a response
 
 ```go
 type ResData struct {
@@ -78,6 +80,46 @@ func main() {
 }
 
 ```
+
+### Transform a response
+```go
+type CreditCard struct {
+    CardNumber string `json:"card_number"`
+}
+
+func (cc *CreditCard) HTTPRespond() (any, error) {
+    var cardType string
+    if strings.HasPrefix(cc.CardNumber, "4") {
+        cardType = "visa"
+    } else if strings.HasPrefix(cc.CardNumber, "5") {
+        cardType = "mastercard"
+    } else {
+        return nil, cmux.HTTPError("unknown card type", 400)
+    }
+    return struct {
+        CardType string `json:"card_type"`
+    }{
+        CardType: cardType,
+    }, nil
+}
+
+func (r *CreditCard) Error() string {
+    return "not filtered"
+}
+
+func main() {
+    m := cmux.Mux{}
+    type Md struct{}
+    m.HandleFunc("/identify-card", &Md{},
+        cmux.Post(func(req *cmux.Request[CreditCard, *Md]) error {
+            return &req.Body
+        }, nil),
+    )
+    http.ListenAndServe("localhost:8080", &m)
+}
+
+```
+
 ## Returning errors
 HTTP errors can be returned directly using `cmux.HTTPError(err string, code int) error` or `cmux.WrapError(err error, code int) error` or by returning a type satisfying the HTTPErrorResponder interface.
 ```go
