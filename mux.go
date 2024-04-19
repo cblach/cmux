@@ -314,22 +314,22 @@ func HTTPError(err string, code int) error {
     }
 }
 
-// Whitelisted data can be returned directly in method handler functions.
-type WhitelistedData struct{
+// Bypassed data can be returned directly in method handler functions.
+type BypassingData struct{
     data any
 }
 
-// Whitelist takes any data and transforms it into WhitelistedData
-// which allows it to be directly returned in method handler functions.
-func Whitelist(res any) WhitelistedData {
-    return WhitelistedData{res}
+// Bypass takes any data and transforms it into data
+// that can be directly returned in method handler functions.
+func Bypass(res any) BypassingData {
+    return BypassingData{res}
 }
 
-func (wd WhitelistedData) HTTPRespond()(any, error) {
+func (wd BypassingData) HTTPRespond()(any, error) {
     return wd.data, nil
 }
 
-func (wd WhitelistedData) Error() string {
+func (wd BypassingData) Error() string {
     return "whitelisted data not working"
 }
 

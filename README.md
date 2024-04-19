@@ -44,10 +44,69 @@ func main() {
     http.ListenAndServe("localhost:8080", &m)
 }
 ```
-## Responseding
-When a MethodHandler returns a type that implements the HTTPResponder interface (and the error interface), the HTTPRespond() method is called and the response is encoded as JSON (unless an error is returned). This can used to filter secret fields.
+## Responding
+When a MethodHandler returns a type that implements the HTTPResponder interface (and the error interface), the HTTPRespond method is called and the response is encoded as JSON (unless an error is returned).
+
+```go
+type Md struct {}
+
+type Cake struct {
+    Name            string `json:"name"`
+    StrawberryCount uint   `json:"strawberry_count"`
+}
+
+func (c *Cake) HTTPRespond() (any, error) {
+    return c, nil
+}
+
+func (c *Cake) Error() string {
+    return "not filtered"
+}
+
+func GetCake(req *cmux.Request[cmux.EmptyBody, *Md]) error {
+    return &Cake{
+        Name:           "Large Strawberry Cake",
+        StrawberryCount: 5,
+    }
+}
+
+func main() {
+    m := cmux.Mux{}
+    m.HandleFunc("/get-cake", &Md{},
+        cmux.Get(GetCake, nil),
+    )
+    http.ListenAndServe("localhost:8080", &m)
+}
+```
+
+### Bypass
+A type implementing the HTTP Response interface and the error interface can be returned directly in Methodhandler functions. This can be bypassed by using the mux.Bypass.
+```go
+type Md struct {}
+
+type Cake struct {
+    Name            string `json:"name"`
+    StrawberryCount uint   `json:"strawberry_count"`
+}
+
+func GetCake(req *cmux.Request[cmux.EmptyBody, *Md]) error {
+    return cmux.Bypass(&Cake{
+        Name:           "Large Strawberry Cake",
+        StrawberryCount: 5,
+    })
+}
+
+func main() {
+    m := cmux.Mux{}
+    m.HandleFunc("/get-cake", &Md{},
+        cmux.Get(GetCake, nil),
+    )
+    http.ListenAndServe("localhost:8080", &m)
+}
+```
 
 ### Filter a response
+HTTPRespond can also filter secret fields. This is useful when loading JSON documents from a database that contains fields that must not be publically available. In turn this allows the use of the same data structures.
 
 ```go
 type ResData struct {
@@ -78,7 +137,6 @@ func main() {
     )
     http.ListenAndServe("localhost:8080", &m)
 }
-
 ```
 
 ### Transform a response
@@ -117,7 +175,6 @@ func main() {
     )
     http.ListenAndServe("localhost:8080", &m)
 }
-
 ```
 
 ## Returning errors
@@ -147,7 +204,7 @@ func main() {
         cmux.Get(func(req *cmux.Request[cmux.EmptyBody, *Md]) error {
             return cmux.HTTPError("", http.StatusNotFound)
         }, nil),
-        cmux.Post(func(req *cmux.Request[PostData, *Md]) error {
+        cmux.Post(func(wreq *cmux.Request[PostData, *Md]) error {
             return cmux.WrapError(errors.New("something bad happened"), http.StatusInternalServerError)
         }, nil),
         cmux.Put(func(req *cmux.Request[PostData, *Md]) error {
@@ -167,7 +224,7 @@ func main() {
         City string
     }
     m := cmux.Mux{
-        Before: func(res http.ResponseWriter, req *http.Request, metadata, methodData any) error {
+        Before: func(req *http.Request, metadata, methodData any) error {
             switch v := metadata.(type) {
             case *Md:
                 permission, ok := methodData.(string)
@@ -190,6 +247,7 @@ func main() {
     )
     http.ListenAndServe("localhost:8080", &m)
 }
+
 ```
 Performing the following curl command in a terminal will then yield a 200 response code:
 ```console
