@@ -148,6 +148,13 @@ func TestPath(t *testing.T) {
     testPath("int16 var", "/{i16var}", fmt.Sprintf("/%d", int16(math.MaxInt16)), MD{I16var: math.MaxInt16})
     testPath("int8 var", "/{i8var}", fmt.Sprintf("/%d", int8(math.MaxInt8)), MD{I8var: math.MaxInt8})
 
+    testPath("negative int var", "/{intvar}", fmt.Sprintf("/%d", math.MinInt), MD{Intvar: math.MinInt})
+    testPath("negative int64 var", "/{i64var}", fmt.Sprintf("/%d", int64(math.MinInt64)), MD{I64var: math.MinInt64})
+    testPath("negative int32 var", "/{i32var}", fmt.Sprintf("/%d", int32(math.MinInt32)), MD{I32var: math.MinInt32})
+    testPath("negative int16 var", "/{i16var}", fmt.Sprintf("/%d", int16(math.MinInt16)), MD{I16var: math.MinInt16})
+    testPath("negative int8 var", "/{i8var}", fmt.Sprintf("/%d", int8(math.MinInt8)), MD{I8var: math.MinInt8})
+
+
     testPath("prefix", "/prefix{xyz_var1}", "/prefixabc", MD{Var1: "abc"})
     testPath("suffix", "/{xyz_var1}suffix", "/z1yxsuffix", MD{Var1: "z1yx"})
     testPath("prefix and suffix", "/prefix{xyz_var1}suffix", "/prefixz1yxsuffix", MD{Var1: "z1yx"})
@@ -163,17 +170,23 @@ func testPost[T any](t *testing.T, desc string, data any) {
         type MD struct{}
         m.HandleFunc("/", &MD{},
             Post(func(req *Request[T, *MD]) error {
-                if !reflect.ValueOf(data).Equal(reflect.ValueOf(req.Body)) {
+                if !reflect.DeepEqual(data, req.Body) {
                     t.Errorf("body mismatch %v != %v",
                              data, req.Body)
                 }
                 return nil
             }, ""),
         )
-        sentBody, err := json.Marshal(data)
-        if err != nil {
-            t.Errorf("json.Marshal failed: %v", err)
-            return
+        var sentBody []byte
+        if b, ok := data.([]byte); ok {
+            sentBody = b
+        } else {
+            var err error
+            sentBody, err = json.Marshal(data)
+            if err != nil {
+                t.Errorf("json.Marshal failed: %v", err)
+                return
+            }
         }
         req, err := http.NewRequest("POST", "/", bytes.NewReader(sentBody))
         if err != nil {
@@ -194,7 +207,11 @@ func TestPost(t *testing.T) {
         A string `json:"a"`
         B string `json:"b"`
     }
-    testPost[BasicPost](t, "basic json", BasicPost{A: "A str", B: "b123 & 123"})
+    testPost[BasicPost](t, "struct", BasicPost{A: "A str", B: "b123 & 123"})
+    testPost[string](t, "string", "abc")
+    testPost[uint](t, "uint", uint(10))
+    testPost[int](t, "int", 10)
+    testPost[[]byte](t, "bytes", []byte{'a', 'b', 'c'})
 }
 
 type ResA struct {

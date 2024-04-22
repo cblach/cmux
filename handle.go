@@ -14,9 +14,8 @@ import(
 )
 
 const(
-    inputTypeNone = iota
+    inputTypeAny = iota
     inputTypeBytes
-    inputTypeStruct
 )
 
 // MethodHandlers each handles a specific HTTP Method. They are returned
@@ -79,15 +78,6 @@ func getHandler[I any, M any](fn func(*Request[I, M]) error,
     case []byte:
         inputType = inputTypeBytes
     }
-    if inputType == inputTypeNone {
-        t := reflect.TypeOf(input)
-        if t.Kind() == reflect.Struct {
-            inputType = inputTypeStruct
-        } else {
-            panic("cmux: cannot handle type " + t.String())
-        }
-
-    }
 
     return func(w http.ResponseWriter, httpReq *http.Request, md any) error {
         req := Request[I, M]{
@@ -116,7 +106,7 @@ func getHandler[I any, M any](fn func(*Request[I, M]) error,
                 }
             }
             *b = barr
-        } else if inputType == inputTypeStruct {
+        } else if inputType == inputTypeAny {
             if err := json.NewDecoder(httpReq.Body).Decode(&req.Body); err != nil {
                 return &codeResponder{
                     code:  http.StatusBadRequest,
