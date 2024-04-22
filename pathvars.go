@@ -32,12 +32,24 @@ func parseString(str string) (unsafe.Pointer, error) {
     return unsafe.Pointer(&str), nil
 }
 
-func parseUint64(str string) (unsafe.Pointer, error) {
-    i, err := strconv.ParseUint(str, 10, 64)
-    if err != nil {
-        return nil, err
+func getParseInt(bitSize int) func (string) (unsafe.Pointer, error) {
+    return func (str string) (unsafe.Pointer, error) {
+        i, err := strconv.ParseInt(str, 10, bitSize)
+        if err != nil {
+            return nil, err
+        }
+        return unsafe.Pointer(&i), nil
     }
-    return unsafe.Pointer(&i), nil
+}
+
+func getParseUint(bitSize int) func (string) (unsafe.Pointer, error) {
+    return func (str string) (unsafe.Pointer, error) {
+        i, err := strconv.ParseUint(str, 10, bitSize)
+        if err != nil {
+            return nil, err
+        }
+        return unsafe.Pointer(&i), nil
+    }
 }
 
 var mdTypeMap = map[reflect.Type]map[string]pathFieldParser{}
@@ -68,8 +80,26 @@ func parseStruct(md any) map[string]pathFieldParser {
         switch f.Type.Kind() {
         case reflect.String:
             fn = parseString
+        case reflect.Uint:
+            fn = getParseUint(0)
         case reflect.Uint64:
-            fn = parseUint64
+            fn = getParseUint(64)
+        case reflect.Uint32:
+            fn = getParseUint(32)
+        case reflect.Uint16:
+            fn = getParseUint(16)
+        case reflect.Uint8:
+            fn = getParseUint(8)
+        case reflect.Int:
+            fn = getParseInt(0)
+        case reflect.Int64:
+            fn = getParseInt(64)
+        case reflect.Int32:
+            fn = getParseInt(32)
+        case reflect.Int16:
+            fn = getParseInt(16)
+        case reflect.Int8:
+            fn = getParseInt(8)
         default:
             log.Fatalln("unsupported kind: " + f.Type.Kind().String())
         }

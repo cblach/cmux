@@ -128,7 +128,6 @@ func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     }
 }
 
-/* Note that fnName exists for debugging purposes */
 func (mux *Mux) mkRoute(path string, metadata any, methodHandlers map[string]*MethodHandler) {
     mux.mutex.Lock()
     if mux.m == nil { mux.m = map[string]*Mux{} }
@@ -253,9 +252,12 @@ func (mux *Mux) handleErr(w http.ResponseWriter, r *http.Request, err error) {
         out = &struct{Error string `json:"error"`}{"internal server error"}
         log.Printf("Encountered unexpected error at %s: %s", r.URL, err.Error())
     }
-
     w.WriteHeader(code)
-    json.NewEncoder(w).Encode(out)
+    if b, ok := out.([]byte); ok {
+        w.Write(b)
+    } else {
+        json.NewEncoder(w).Encode(out)
+    }
     if mux.debug {
         res := http.Response {
             StatusCode: code,
