@@ -4,6 +4,7 @@
 
 package cmux
 import(
+    "context"
     "encoding/json"
     "errors"
     "fmt"
@@ -41,6 +42,8 @@ type EmptyBody struct{}
 type Request[T any, M any] struct {
     Body T
     Metadata M
+    Context context.Context
+
 
     /* Underlying native golang request / responsewriter: */
     HTTPReq *http.Request
@@ -54,6 +57,7 @@ func getEmptyBodyHandler[I EmptyBody, M any](fn func(*Request[I, M]) error,
     return func (w http.ResponseWriter, httpReq *http.Request, md any) error {
         req := Request[I, M]{
             Body:          I{},
+            Context:       httpReq.Context(),
             HTTPReq:       httpReq,
             ResponseWriter: w,
         }
@@ -81,7 +85,8 @@ func getHandler[I any, M any](fn func(*Request[I, M]) error,
 
     return func(w http.ResponseWriter, httpReq *http.Request, md any) error {
         req := Request[I, M]{
-            HTTPReq: httpReq,
+            Context:        httpReq.Context(),
+            HTTPReq:        httpReq,
             ResponseWriter: w,
         }
         if md != nil {
